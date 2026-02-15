@@ -1,0 +1,291 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Catalog API",
+    "version": "1.0.0",
+    "description": "API documentation for catalog items"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8001"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "Specs": {
+        "type": "object",
+        "properties": {
+          "supplier": {
+            "type": "string",
+            "example": "Flexitallic"
+          },
+          "standard": {
+            "type": "string",
+            "example": "ASME B16.20"
+          },
+          "nominalSize": {
+            "type": "string",
+            "example": "2 in"
+          },
+          "pressureClass": {
+            "type": "string",
+            "example": "ASME 150"
+          },
+          "face": {
+            "type": "string",
+            "example": "RF"
+          },
+          "windingMaterial": {
+            "type": "string",
+            "example": "316 SS"
+          },
+          "fillerMaterial": {
+            "type": "string",
+            "example": "Graphite"
+          },
+          "innerRing": {
+            "type": "string",
+            "example": "316 SS"
+          },
+          "outerRing": {
+            "type": "string",
+            "example": "Carbon Steel"
+          }
+        }
+      },
+      "CatalogItem": {
+        "type": "object",
+        "required": ["id", "name", "category", "supplier", "priceUsd"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "GST-0001"
+          },
+          "name": {
+            "type": "string",
+            "example": "Spiral Wound Gasket"
+          },
+          "category": {
+            "type": "string",
+            "example": "Gasket"
+          },
+          "supplier": {
+            "type": "string",
+            "example": "Flexitallic"
+          },
+          "manufacturer": {
+            "type": "string",
+            "example": "Flexitallic Ltd"
+          },
+          "model": {
+            "type": "string",
+            "example": "SWG-150"
+          },
+          "description": {
+            "type": "string",
+            "example": "High pressure spiral wound gasket"
+          },
+          "leadTimeDays": {
+            "type": "number",
+            "example": 5
+          },
+          "priceUsd": {
+            "type": "number",
+            "example": 45.5
+          },
+          "inStock": {
+            "type": "boolean",
+            "example": true
+          },
+          "specs": {
+            "$ref": "#/components/schemas/Specs"
+          }
+        }
+      },
+      "BulkCatalogItems": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogItem"
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/catalog/": {
+      "get": {
+        "summary": "Get catalog items",
+        "description": "Retrieve catalog items with optional filtering and sorting",
+        "tags": ["Catalog"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "description": "Search by name, id, supplier, manufacturer, model"
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "description": "Filter items by category"
+          },
+          {
+            "in": "query",
+            "name": "inStock",
+            "schema": {
+              "type": "boolean"
+            },
+            "required": false,
+            "description": "Filter items by inStock status"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": ["id", "supplier", "priceUsd", "leadTimeDays"]
+            },
+            "required": false,
+            "description": "Field to sort by (default is id)"
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "schema": {
+              "type": "string",
+              "enum": ["asc", "desc"]
+            },
+            "required": false,
+            "description": "Sort order (default asc)",
+            "example": "asc"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of catalog items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogItem"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a catalog item",
+        "tags": ["Catalog"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/CatalogItem"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Data added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/{id}": {
+      "put": {
+        "summary": "Update a catalog item by ID. You can only insert fields which need to be updated.",
+        "tags": ["Catalog"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "GST-0001"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogItem"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Item updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "application/json",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a catalog item",
+        "tags": ["Catalog"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "GST-0001"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item deleted successfully"
+          }
+        }
+      }
+    }
+  },
+  "tags": []
+}

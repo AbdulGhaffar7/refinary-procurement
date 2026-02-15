@@ -1,0 +1,5 @@
+client
+services/catalog-service/node_modules
+services/catalog-service/.env
+services/procurement-service/node_modules
+services/procurement-service/.env
