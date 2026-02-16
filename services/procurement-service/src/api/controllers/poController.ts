@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { PurchaseOrder } from "../models/PurchaseOrderSchema";
 import { POAudit } from "../models/POAuditSchema";
 import { generatePONumber } from "../../utils/poNumberGenerator";
+import { createPOLines } from "../../utils/createPOLines";
 
 export const getPOs = async (req: Request, res: Response) => {
   try {
@@ -38,7 +39,7 @@ export const getPOById = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Purchase Order not found" });
 
     // Fetch the history/audit trail for this PO
-    const history = await POAudit.find({ poId: id as string }).sort({
+    const history = await POAudit.find({ poNumber: id as string }).sort({
       timestamp: -1,
     });
 
@@ -54,16 +55,28 @@ export const getPOById = async (req: Request, res: Response) => {
 
 export const createDraft = async (req: Request, res: Response) => {
   try {
-    const { supplier, requester, costCenter, neededBy, paymentTerms } =
-      req.body;
+    const {
+      items,
+      validatedItems,
+      requester,
+      costCenter,
+      neededBy,
+      paymentTerms,
+    } = req.body;
 
-    // Generate the professional ID
     const poNumber = await generatePONumber();
+    const lineItems = createPOLines(items, validatedItems);
+    const totalAmount = lineItems.reduce(
+      (sum, item) => sum + item.priceTotal,
+      0
+    );
 
     const newPO = await PurchaseOrder.create({
-      poNumber: poNumber, // e.g., "2026-00001"
-      supplier: supplier || null,
-      items: [],
+      poNumber,
+      // If items exist, use the supplier from the first validated item
+      supplier: lineItems.length > 0 ? lineItems[0]?.supplier : null,
+      items: lineItems,
+      totalAmount,
       requester,
       costCenter,
       neededBy,
@@ -83,27 +96,63 @@ export const createDraft = async (req: Request, res: Response) => {
   }
 };
 
-export const addItemToPO = async (req: Request, res: Response) => {
+export const syncItemsToPO = async (req: Request, res: Response) => {
   try {
-    const { quantity, validatedItem, targetPO } = req.body;
-    const priceTotal = validatedItem.priceUsd * quantity;
-    targetPO.items.push({
-      catalogItemId: validatedItem.productId,
-      name: validatedItem.name,
-      quantity,
-      pricePerUnit: validatedItem.priceUsd,
-      priceTotal,
-    });
+    const { items, validatedItems, targetPO } = req.body;
 
-    // Update total amount
-    targetPO.totalAmount += priceTotal;
+    const lineItems = createPOLines(items, validatedItems);
+    const totalAmount = lineItems.reduce(
+      (sum, item) => sum + item.priceTotal,
+      0
+    );
 
-    // Ensure the PO knows its supplier if this was the first item
-    if (!targetPO.supplier || targetPO?.items?.length === 1)
-      targetPO.supplier = validatedItem.supplier;
-
+    targetPO.items = lineItems;
+    targetPO.totalAmount = totalAmount;
     await targetPO.save();
     res.status(200).json(targetPO);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const removeItemFromPO = async (req: Request, res: Response) => {
+  try {
+    const { id: poNumber, productId } = req.params;
+
+    const po = await PurchaseOrder.findOne({ poNumber: poNumber as string });
+
+    if (!po) {
+      return res.status(404).json({ message: "Purchase Order not found" });
+    }
+
+    // 1. Calculate the total value of the items being removed
+    const itemsToRemove = po.items.filter(
+      (item: any) => item.catalogItemId === productId
+    );
+
+    if (itemsToRemove.length === 0) {
+      return res.status(404).json({ message: "Product not found in this PO" });
+    }
+
+    const totalToRemove = itemsToRemove.reduce(
+      (sum: number, item: any) => sum + item.priceTotal,
+      0
+    );
+
+    // 2. Update PO: Subtract amount and filter the array
+    po.totalAmount -= totalToRemove;
+    (po.items as any).pull({ catalogItemId: productId });
+
+    if (po.items.length === 0) {
+      po.supplier = null;
+    }
+
+    await po.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Removed ${itemsToRemove.length} instance(s) of product ${productId}`,
+    });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

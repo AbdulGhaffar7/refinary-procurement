@@ -29,12 +29,12 @@ export const swaggerOptions = {
           },
           fromStatus: {
             type: "string",
-            enum: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
+            enum: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED", "FULFILLED"],
             example: "DRAFT",
           },
           toStatus: {
             type: "string",
-            enum: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
+            enum: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED", "FULFILLED"],
             example: "DRAFT",
           },
           action: {
@@ -64,7 +64,7 @@ export const swaggerOptions = {
             },
             status: {
               type: "string",
-              enum: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
+              enum: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED", "FULFILLED"],
               example: "DRAFT",
             },
             items: {
@@ -88,6 +88,26 @@ export const swaggerOptions = {
           },
         },
 
+        LineItemRequest: {
+          type: "object",
+          required: ["catalogItemId", "quantity"],
+          properties: {
+            catalogItemId: { type: "string", example: "GST-0001" },
+            quantity: { type: "number", minimum: 1, example: 5 },
+          },
+        },
+
+        ItemsRequest: {
+          type: "object",
+          required: ["items"],
+          properties: {
+            items: {
+              type: "array",
+              items: { $ref: "#/components/schemas/LineItemRequest" },
+            },
+          },
+        },
+
         CreateDraftPO: {
           type: "object",
           required: ["requester", "neededBy"],
@@ -99,15 +119,10 @@ export const swaggerOptions = {
               type: "string",
               enum: ["Cash", "Credit", "Installments"],
             },
-          },
-        },
-
-        LineItemRequest: {
-          type: "object",
-          required: ["catalogItemId", "quantity"],
-          properties: {
-            catalogItemId: { type: "string", example: "GST-0001" },
-            quantity: { type: "number", minimum: 1, example: 5 },
+            items: {
+              type: "array",
+              items: { $ref: "#/components/schemas/LineItemRequest" },
+            },
           },
         },
 
@@ -129,7 +144,7 @@ export const swaggerOptions = {
           properties: {
             status: {
               type: "string",
-              enum: ["SUBMITTED", "APPROVED", "REJECTED"],
+              enum: ["SUBMITTED", "APPROVED", "REJECTED", "FULFILLED"],
             },
             notes: {
               type: "string",

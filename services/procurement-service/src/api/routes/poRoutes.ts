@@ -4,45 +4,20 @@ import { validateSupplierConflict } from "../middlewares/supplierMiddleware";
 
 const router = Router();
 
-router.post("/", poController.createDraft);
+router.post("/", validateSupplierConflict, poController.createDraft);
 
 router.get("/", poController.getPOs); // Search, Filter, Sort
 router.get("/:id", poController.getPOById);
 
 // The core logic endpoint: Adding items with 409 Conflict check
-router.post("/:id/items", validateSupplierConflict, poController.addItemToPO);
+router.post("/:id/items", validateSupplierConflict, poController.syncItemsToPO);
+
+router.delete("/:id/items/:productId", poController.removeItemFromPO);
 
 // Status transitions
 router.patch("/:id/status", poController.updateStatus);
 
 export default router;
-
-/**
- * @swagger
- * /api/v1/purchase-order/:
- *   post:
- *     summary: To create a purchase order with status Draft.
- *     description: This is the first step to create a purchase order. It assigns a PO number and sets the status to DRAFT. The PO can then be modified by adding items before submission.
-
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/CreateDraftPO'
- *     responses:
- *       201:
- *         description: Draft PO created
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/PurchaseOrder'
- *       400:
- *         description: Invalid request body
-
- *       500:
- *         description: Internal server error
- */
 
 /**
  * @swagger
@@ -56,7 +31,7 @@ export default router;
  *         name: status
  *         schema:
  *           type: string
- *           enum: [DRAFT, SUBMITTED, APPROVED, REJECTED]
+ *           enum: [DRAFT, SUBMITTED, APPROVED, REJECTED, FULFILLED]
  *       - in: query
  *         name: supplier
  *         schema:
@@ -118,10 +93,37 @@ export default router;
 
 /**
  * @swagger
+ * /api/v1/purchase-order/:
+ *   post:
+ *     summary: To create a purchase order with status Draft.
+ *     description: This is the first step to create a purchase order. It assigns a PO number and sets the status to DRAFT. The PO can then be modified by adding items before submission.
+
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateDraftPO'
+ *     responses:
+ *       201:
+ *         description: Draft PO created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PurchaseOrder'
+ *       400:
+ *         description: Invalid request body
+
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
  * /api/v1/purchase-order/{id}/items:
  *   post:
- *     summary: Add item to purchase order
- *     description: Adds an item to a draft PO. Returns 409 if supplier conflict occurs.
+ *     summary: Sync items to purchase order
+ *     description: Sync  items to a draft PO. Returns 409 if supplier conflict occurs.
 
  *     parameters:
  *       - in: path
@@ -134,7 +136,7 @@ export default router;
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/LineItemRequest'
+ *             $ref: '#/components/schemas/ItemsRequest'
  *     responses:
  *       200:
  *         description: Item added successfully
@@ -156,10 +158,41 @@ export default router;
 
 /**
  * @swagger
+ * /api/v1/purchase-order/{id}/items/{productId}:
+ *   delete:
+ *     summary: Delete Item from the Purchase Order
+ *     description: Deletes an item from a draft PO.
+
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Item removed successfully
+ *       400:
+ *         description: Invalid state (cannot modify non-draft PO)
+ *       404:
+ *         description: Purchase order not found
+ *       409:
+ *         description: Supplier conflict detected
+ *       422:
+ *         description: Invalid quantity or pricing
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
  * /api/v1/purchase-order/{id}/status:
  *   patch:
  *     summary: Update purchase order status
- *     description: Changes PO workflow state (DRAFT → SUBMITTED → APPROVED/REJECTED)
+ *     description: Changes PO workflow state (DRAFT → SUBMITTED → APPROVED/REJECTED -> FULFILLED)
 
  *     parameters:
  *       - in: path

@@ -32,7 +32,7 @@ const POSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
+      enum: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED", "FULFILLED"],
       default: "DRAFT",
       index: true,
     },

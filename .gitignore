@@ -1,4 +1,8 @@
-client
+node_modules
+client/node_modules
+client/public
+client/.env
+client/package-lock.json
 services/catalog-service/node_modules
 services/catalog-service/.env
 services/procurement-service/node_modules

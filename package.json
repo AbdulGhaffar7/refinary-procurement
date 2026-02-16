@@ -1,0 +1,14 @@
+{
+  "name": "refinery-po-system",
+  "version": "1.0.0",
+  "scripts": {
+    "install-all": "npm install && cd services/catalog-service && npm install && cd ../procurement-service && npm install && cd ../../client && npm install",
+    "dev": "concurrently \"npm run dev:catalog\" \"npm run dev:procurement\" \"npm run dev:client\"",
+    "dev:catalog": "cd services/catalog-service && npm run dev",
+    "dev:procurement": "cd services/procurement-service && npm run dev",
+    "dev:client": "cd client && npm run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
