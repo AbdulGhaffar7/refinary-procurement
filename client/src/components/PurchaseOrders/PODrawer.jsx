@@ -50,7 +50,7 @@ export function PODrawer() {
     try {
       if (poNumber) {
         const update = await poApi.SyncItemstoPO(poNumber, {
-          ...items,
+          items: [...items],
         });
 
         if (update.status === 200) {

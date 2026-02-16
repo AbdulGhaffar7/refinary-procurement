@@ -121,7 +121,6 @@
       "get": {
         "summary": "Get catalog items",
         "description": "Retrieve catalog items with optional filtering and sorting",
-        "tags": ["Catalog"],
         "parameters": [
           {
             "in": "query",
@@ -193,7 +192,6 @@
       },
       "post": {
         "summary": "Create a catalog item",
-        "tags": ["Catalog"],
         "requestBody": {
           "required": true,
           "content": {
@@ -227,7 +225,6 @@
     "/api/v1/catalog/{id}": {
       "put": {
         "summary": "Update a catalog item by ID. You can only insert fields which need to be updated.",
-        "tags": ["Catalog"],
         "parameters": [
           {
             "in": "path",
@@ -267,7 +264,6 @@
       },
       "delete": {
         "summary": "Delete a catalog item",
-        "tags": ["Catalog"],
         "parameters": [
           {
             "in": "path",

@@ -18,12 +18,12 @@
         },
         "fromStatus": {
           "type": "string",
-          "enum": ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
+          "enum": ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED", "FULFILLED"],
           "example": "DRAFT"
         },
         "toStatus": {
           "type": "string",
-          "enum": ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
+          "enum": ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED", "FULFILLED"],
           "example": "DRAFT"
         },
         "action": {
@@ -66,7 +66,7 @@
           },
           "status": {
             "type": "string",
-            "enum": ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
+            "enum": ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED", "FULFILLED"],
             "example": "DRAFT"
           },
           "items": {
@@ -103,6 +103,33 @@
           }
         }
       },
+      "LineItemRequest": {
+        "type": "object",
+        "required": ["catalogItemId", "quantity"],
+        "properties": {
+          "catalogItemId": {
+            "type": "string",
+            "example": "GST-0001"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1,
+            "example": 5
+          }
+        }
+      },
+      "ItemsRequest": {
+        "type": "object",
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineItemRequest"
+            }
+          }
+        }
+      },
       "CreateDraftPO": {
         "type": "object",
         "required": ["requester", "neededBy"],
@@ -123,21 +150,12 @@
           "paymentTerms": {
             "type": "string",
             "enum": ["Cash", "Credit", "Installments"]
-          }
-        }
-      },
-      "LineItemRequest": {
-        "type": "object",
-        "required": ["catalogItemId", "quantity"],
-        "properties": {
-          "catalogItemId": {
-            "type": "string",
-            "example": "GST-0001"
           },
-          "quantity": {
-            "type": "number",
-            "minimum": 1,
-            "example": 5
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineItemRequest"
+            }
           }
         }
       },
@@ -174,7 +192,7 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["SUBMITTED", "APPROVED", "REJECTED"]
+            "enum": ["SUBMITTED", "APPROVED", "REJECTED", "FULFILLED"]
           },
           "notes": {
             "type": "string",
@@ -267,7 +285,6 @@
       "get": {
         "summary": "Get mirrored catalog items",
         "description": "Returns locally cached catalog items synchronized from catalog service. This endpoint is optimized for fast read access inside the procurement system and avoids cross-service latency.",
-        "tags": ["Catalog Mirror"],
         "responses": {
           "200": {
             "description": "List of mirrored items",
@@ -290,11 +307,10 @@
       "post": {
         "summary": "Sync catalog item into mirror",
         "description": "Creates or updates a mirrored catalog item (used by catalog service or message consumer). This endpoint behaves as an UPSERT operation.",
-        "tags": ["Catalog Mirror"],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "array": {
               "schema": {
                 "$ref": "#/components/schemas/SyncCatalogMirrorRequest"
               }
@@ -321,7 +337,6 @@
       "delete": {
         "summary": "Remove mirrored catalog item",
         "description": "Deletes item from local mirror when removed from catalog service to maintain eventual consistency.",
-        "tags": ["Catalog Mirror"],
         "parameters": [
           {
             "in": "path",
@@ -347,50 +362,22 @@
       }
     },
     "/api/v1/purchase-order/": {
-      "post": {
-        "summary": "To create a purchase order with status Draft.",
-        "description": "This is the first step to create a purchase order. It assigns a PO number and sets the status to DRAFT. The PO can then be modified by adding items before submission.",
-        "tags": ["Purchase Orders"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateDraftPO"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Draft PO created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PurchaseOrder"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request body"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        }
-      },
       "get": {
         "summary": "Get purchase orders",
         "description": "Supports filtering by status, supplier, requester and sorting by various fields. This allows users to easily find and manage their purchase orders based on workflow state and other criteria.",
-        "tags": ["Purchase Orders"],
         "parameters": [
           {
             "in": "query",
             "name": "status",
             "schema": {
               "type": "string",
-              "enum": ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"]
+              "enum": [
+                "DRAFT",
+                "SUBMITTED",
+                "APPROVED",
+                "REJECTED",
+                "FULFILLED"
+              ]
             }
           },
           {
@@ -451,13 +438,44 @@
             "description": "Internal server error"
           }
         }
+      },
+      "post": {
+        "summary": "To create a purchase order with status Draft.",
+        "description": "This is the first step to create a purchase order. It assigns a PO number and sets the status to DRAFT. The PO can then be modified by adding items before submission.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDraftPO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Draft PO created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseOrder"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
       }
     },
     "/api/v1/purchase-order/{id}": {
       "get": {
         "summary": "Get purchase order by ID along with history",
         "description": "Retrieves a specific purchase order by its ID, including all details and a history of status changes. This allows users to track the lifecycle of the PO and understand its current state in the procurement process.",
-        "tags": ["Purchase Orders"],
         "parameters": [
           {
             "in": "path",
@@ -490,9 +508,8 @@
     },
     "/api/v1/purchase-order/{id}/items": {
       "post": {
-        "summary": "Add item to purchase order",
-        "description": "Adds an item to a draft PO. Returns 409 if supplier conflict occurs.",
-        "tags": ["Purchase Orders"],
+        "summary": "Sync items to purchase order",
+        "description": "Sync  items to a draft PO. Returns 409 if supplier conflict occurs.",
         "parameters": [
           {
             "in": "path",
@@ -508,7 +525,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LineItemRequest"
+                "$ref": "#/components/schemas/ItemsRequest"
               }
             }
           }
@@ -542,11 +559,51 @@
         }
       }
     },
+    "/api/v1/purchase-order/{id}/items/{productId}": {
+      "delete": {
+        "summary": "Delete Item from the Purchase Order",
+        "description": "Deletes an item from a draft PO.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "productId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item removed successfully"
+          },
+          "400": {
+            "description": "Invalid state (cannot modify non-draft PO)"
+          },
+          "404": {
+            "description": "Purchase order not found"
+          },
+          "409": {
+            "description": "Supplier conflict detected"
+          },
+          "422": {
+            "description": "Invalid quantity or pricing"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/api/v1/purchase-order/{id}/status": {
       "patch": {
         "summary": "Update purchase order status",
-        "description": "Changes PO workflow state (DRAFT → SUBMITTED → APPROVED/REJECTED)",
-        "tags": ["Purchase Orders"],
+        "description": "Changes PO workflow state (DRAFT → SUBMITTED → APPROVED/REJECTED -\u003E FULFILLED)",
         "parameters": [
           {
             "in": "path",
